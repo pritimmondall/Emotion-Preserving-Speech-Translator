@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-multipart
+websockets
+numpy
+scipy
+torch
+torchaudio
+faster-whisper
+speechbrain
+googletrans==4.0.0-rc1  # Need the RC1 version for stability
+edge-tts  # For the CPU-friendly TTS
+pydub
