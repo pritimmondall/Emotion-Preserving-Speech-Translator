@@ -1,0 +1,179 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design System for Emotion-Preserving Speech Translation UI */
+
+@layer base {
+  :root {
+    --background: 220 20% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 220 15% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 15% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 195 90% 55%;
+    --primary-foreground: 220 20% 8%;
+
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 220 15% 20%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 260 80% 60%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 85% 55%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 18%;
+    --ring: 195 90% 55%;
+
+    --radius: 1rem;
+
+    /* Custom emotion colors */
+    --emotion-happy: 45 95% 55%;
+    --emotion-sad: 210 80% 55%;
+    --emotion-angry: 0 85% 55%;
+    --emotion-neutral: 220 10% 50%;
+
+    /* Glow effects */
+    --glow-primary: 195 90% 55%;
+    --glow-accent: 260 80% 60%;
+    
+    /* Glassmorphism */
+    --glass-bg: 220 15% 12% / 0.6;
+    --glass-border: 220 15% 30% / 0.3;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/60 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-500 hover:bg-card/80 hover:border-white/20 hover:shadow-primary/10;
+  }
+
+  .glow-primary {
+    box-shadow: 0 0 40px hsl(var(--primary) / 0.3), 0 0 80px hsl(var(--primary) / 0.1);
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 40px hsl(var(--accent) / 0.3), 0 0 80px hsl(var(--accent) / 0.1);
+  }
+
+  .text-gradient-primary {
+    @apply bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent;
+    background-size: 200% auto;
+  }
+
+  .btn-primary-glow {
+    @apply bg-primary text-primary-foreground font-semibold px-8 py-4 rounded-xl transition-all duration-300;
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.4), 0 4px 20px hsl(var(--primary) / 0.2);
+  }
+
+  .btn-primary-glow:hover {
+    box-shadow: 0 0 40px hsl(var(--primary) / 0.6), 0 8px 30px hsl(var(--primary) / 0.3);
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary-glass {
+    @apply bg-secondary/50 backdrop-blur-lg text-foreground font-semibold px-8 py-4 rounded-xl border border-white/10 transition-all duration-300;
+  }
+
+  .btn-secondary-glass:hover {
+    @apply bg-secondary/70 border-white/20;
+  }
+
+  .emotion-badge {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm backdrop-blur-lg border;
+  }
+
+  .emotion-happy {
+    @apply bg-[hsl(45_95%_55%/0.15)] border-[hsl(45_95%_55%/0.3)] text-[hsl(45_95%_65%)];
+  }
+
+  .emotion-sad {
+    @apply bg-[hsl(210_80%_55%/0.15)] border-[hsl(210_80%_55%/0.3)] text-[hsl(210_80%_65%)];
+  }
+
+  .emotion-angry {
+    @apply bg-[hsl(0_85%_55%/0.15)] border-[hsl(0_85%_55%/0.3)] text-[hsl(0_85%_65%)];
+  }
+
+  .emotion-neutral {
+    @apply bg-[hsl(220_10%_50%/0.15)] border-[hsl(220_10%_50%/0.3)] text-[hsl(220_10%_70%)];
+  }
+
+  .slider-glow {
+    @apply appearance-none h-2 rounded-full bg-secondary cursor-pointer;
+  }
+
+  .slider-glow::-webkit-slider-thumb {
+    @apply appearance-none w-5 h-5 rounded-full bg-primary cursor-pointer;
+    box-shadow: 0 0 15px hsl(var(--primary) / 0.6);
+  }
+}
+
+@layer utilities {
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .animate-wave {
+    animation: wave 1.5s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { 
+      box-shadow: 0 0 20px hsl(var(--primary) / 0.4);
+      transform: scale(1);
+    }
+    50% { 
+      box-shadow: 0 0 40px hsl(var(--primary) / 0.7);
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes wave {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(1.5); }
+  }
+}
