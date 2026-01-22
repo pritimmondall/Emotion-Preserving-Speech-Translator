@@ -11,8 +11,8 @@ import { TechnicalPanel } from "@/components/TechnicalPanel";
 import { Footer } from "@/components/Footer";
 import { Emotion } from "@/components/EmotionBadge";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
-import { translationApi } from "@/services/translationApi";
 import { useToast } from "@/hooks/use-toast";
+import { websocketService, TranscriptionResult } from "@/services/websocket";
 
 // Map backend emotion labels to frontend emotion types
 const mapEmotion = (emotion: string): Emotion => {
@@ -38,10 +38,11 @@ const generateEmotionData = () => {
   }));
 };
 
-// Available languages for translation
+// Available Regional Indian Languages for translation
 const LANGUAGES = [
-  "English", "Spanish", "French", "German", "Italian", 
-  "Portuguese", "Russian", "Chinese", "Japanese", "Korean"
+  "English", "Hindi", "Bengali", "Telugu", "Marathi", 
+  "Tamil", "Gujarati", "Kannada", "Malayalam", "Punjabi",
+  "Odia", "Urdu"
 ];
 
 const Index = () => {
@@ -50,27 +51,54 @@ const Index = () => {
   const [translatedText, setTranslatedText] = useState("");
   const [currentEmotion, setCurrentEmotion] = useState<Emotion>("neutral");
   const [emotionIntensity, setEmotionIntensity] = useState(50);
-  const [pitch, setPitch] = useState(65);
+  const [pitch, setPitch] = useState(50);
   const [tone, setTone] = useState(50);
-  const [speed, setSpeed] = useState(75);
+  const [speed, setSpeed] = useState(50);
   const [isEmotionPreserving, setIsEmotionPreserving] = useState(true);
   const [emotionData, setEmotionData] = useState(generateEmotionData());
   const [sourceLanguage, setSourceLanguage] = useState("English");
-  const [targetLanguage, setTargetLanguage] = useState("Spanish");
+  const [targetLanguage, setTargetLanguage] = useState("Hindi");
   const [emotionHistory, setEmotionHistory] = useState<Array<{emotion: string, intensity: number, timestamp: number}>>([]);
+  const [audioData, setAudioData] = useState<string | undefined>(undefined);
+  const [audioFormat, setAudioFormat] = useState<string>("mp3");
   const translationRef = useRef<HTMLDivElement>(null);
 
+  // Send settings to backend whenever they change
+  useEffect(() => {
+    if (websocketService.isConnected()) {
+      websocketService.sendSettings({
+        pitch,
+        rate: speed,
+        volume: tone,
+        targetLanguage,
+        sourceLanguage,
+        emotionPreserving: isEmotionPreserving,
+      });
+    }
+  }, [pitch, speed, tone, targetLanguage, sourceLanguage, isEmotionPreserving]);
+
   // Handle transcription results from the backend
-  const handleTranscription = useCallback(async (result: { text: string; emotion: string; intensity: number }) => {
+  const handleTranscription = useCallback(async (result: TranscriptionResult) => {
     console.log("Received transcription:", result);
     
     // Update original text (what was said)
     setOriginalText(result.text);
     
+    // Update translated text (from backend)
+    if (result.translatedText) {
+      setTranslatedText(result.translatedText);
+    }
+    
     // Update emotion
     const mappedEmotion = mapEmotion(result.emotion);
     setCurrentEmotion(mappedEmotion);
     setEmotionIntensity(Math.round(result.intensity * 100));
+
+    // Update audio data if present
+    if (result.audio) {
+      setAudioData(result.audio);
+      setAudioFormat(result.audioFormat || "mp3");
+    }
 
     // Add to emotion history for analytics
     setEmotionHistory(prev => [...prev.slice(-20), {
@@ -91,25 +119,7 @@ const Index = () => {
       });
       return newData;
     });
-
-    // Translate the text
-    if (result.text && result.text.trim()) {
-      try {
-        const translation = await translationApi.translate({
-          text: result.text,
-          sourceLanguage,
-          targetLanguage,
-          emotion: isEmotionPreserving ? result.emotion : undefined,
-          intensity: isEmotionPreserving ? result.intensity : undefined,
-        });
-        setTranslatedText(translation.translatedText);
-      } catch (error) {
-        console.error("Translation error:", error);
-        // Fallback: show original text with note
-        setTranslatedText(`[Translation pending] ${result.text}`);
-      }
-    }
-  }, [sourceLanguage, targetLanguage, isEmotionPreserving]);
+  }, []);
 
   // Handle recording errors
   const handleError = useCallback((error: Error) => {
@@ -245,6 +255,26 @@ const Index = () => {
             </div>
           </motion.div>
 
+          {/* Language Selection Dropdown */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-center mb-8 gap-4"
+          >
+            <div className="glass-card rounded-xl p-4">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">Target Language</label>
+              <select
+                value={targetLanguage}
+                onChange={(e) => setTargetLanguage(e.target.value)}
+                className="bg-secondary border border-white/10 text-foreground rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary min-w-[200px]"
+              >
+                {LANGUAGES.filter(lang => lang !== sourceLanguage).map((lang) => (
+                  <option key={lang} value={lang}>{lang}</option>
+                ))}
+              </select>
+            </div>
+          </motion.div>
+
           {/* Translation Panels */}
           <TranslationPanel
             isActive={isRecording}
@@ -254,6 +284,8 @@ const Index = () => {
             emotionIntensity={emotionIntensity}
             sourceLanguage={sourceLanguage}
             targetLanguage={targetLanguage}
+            audioData={audioData}
+            audioFormat={audioFormat}
           />
         </div>
       </section>

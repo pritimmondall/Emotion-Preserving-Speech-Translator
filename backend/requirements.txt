@@ -9,7 +9,8 @@ faster-whisper
 transformers
 torch --index-url https://download.pytorch.org/whl/cpu
 librosa
-webrtcvad
 # Translation support
 sentencepiece
 sacremoses
+# Text-to-Speech with prosody control
+edge-tts

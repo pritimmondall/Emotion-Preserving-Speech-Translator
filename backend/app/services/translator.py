@@ -1,55 +1,48 @@
-from transformers import pipeline, AutoModelForSeq2SeqLM, AutoTokenizer
+from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer
 import logging
 from typing import Optional
 
-# Language code mapping for Helsinki-NLP models
+# Language code mapping for M2M100 model - Regional Indian Languages
 LANGUAGE_CODES = {
     "English": "en",
-    "Spanish": "es", 
-    "French": "fr",
-    "German": "de",
-    "Italian": "it",
-    "Portuguese": "pt",
-    "Russian": "ru",
-    "Chinese": "zh",
-    "Japanese": "ja",
-    "Korean": "ko",
-    "Arabic": "ar",
     "Hindi": "hi",
+    "Bengali": "bn",
+    "Telugu": "te",
+    "Marathi": "mr",
+    "Tamil": "ta",
+    "Gujarati": "gu",
+    "Kannada": "kn",
+    "Malayalam": "ml",
+    "Punjabi": "pa",
+    "Odia": "or",
+    "Urdu": "ur",
 }
 
 class Translator:
     def __init__(self):
         print("Loading Translation Model...")
-        # Use a lightweight multilingual translation model
-        # This model supports many language pairs
-        self.model_name = "Helsinki-NLP/opus-mt-en-es"  # Default English to Spanish
-        self.models = {}
-        self.tokenizers = {}
-        
-        # Pre-load the default model
-        self._load_model("en", "es")
-        print("Translation Model Loaded.")
+        # Use M2M100 - a multilingual model that supports many-to-many translation
+        # This eliminates the need to load separate models for each language pair
+        self.model_name = "facebook/m2m100_418M"
+        try:
+            self.tokenizer = M2M100Tokenizer.from_pretrained(self.model_name)
+            self.model = M2M100ForConditionalGeneration.from_pretrained(self.model_name)
+            print("Translation Model Loaded successfully.")
+        except Exception as e:
+            print(f"Error loading translation model: {e}")
+            print("Translation will not be available.")
+            self.tokenizer = None
+            self.model = None
 
     def _get_model_name(self, source_lang: str, target_lang: str) -> str:
         """Get the appropriate model name for the language pair"""
-        return f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}"
+        return self.model_name
 
     def _load_model(self, source_lang: str, target_lang: str):
-        """Load a translation model for a specific language pair"""
-        model_key = f"{source_lang}-{target_lang}"
-        if model_key not in self.models:
-            try:
-                model_name = self._get_model_name(source_lang, target_lang)
-                print(f"Loading translation model: {model_name}")
-                self.tokenizers[model_key] = AutoTokenizer.from_pretrained(model_name)
-                self.models[model_key] = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-                print(f"Model {model_name} loaded successfully")
-            except Exception as e:
-                print(f"Failed to load model for {source_lang}->{target_lang}: {e}")
-                # Fallback to pipeline with mBART for unsupported pairs
-                return None
-        return model_key
+        """Check if model is loaded"""
+        if self.model and self.tokenizer:
+            return "m2m100"
+        return None
 
     def translate(
         self, 
@@ -66,24 +59,35 @@ class Translator:
         if not text or not text.strip():
             return ""
 
+        # If model is not available, return original text
+        if not self.model or not self.tokenizer:
+            print("Translation model not available, returning original text")
+            return text
+
         # Convert language names to codes
         src_code = LANGUAGE_CODES.get(source_lang, "en")
         tgt_code = LANGUAGE_CODES.get(target_lang, "es")
 
         try:
-            model_key = self._load_model(src_code, tgt_code)
+            # Set source language
+            self.tokenizer.src_lang = src_code
             
-            if model_key and model_key in self.models:
-                tokenizer = self.tokenizers[model_key]
-                model = self.models[model_key]
-                
-                # Tokenize and translate
-                inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
-                outputs = model.generate(**inputs, max_length=512, num_beams=4, early_stopping=True)
-                translated = tokenizer.decode(outputs[0], skip_special_tokens=True)
-            else:
-                # Fallback: return original text with note
-                translated = text
+            # Tokenize the input text
+            encoded = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+            
+            # Generate translation
+            # Force the target language with forced_bos_token_id
+            forced_bos_token_id = self.tokenizer.get_lang_id(tgt_code)
+            generated_tokens = self.model.generate(
+                **encoded,
+                forced_bos_token_id=forced_bos_token_id,
+                max_length=512,
+                num_beams=5,
+                early_stopping=True
+            )
+            
+            # Decode the translation
+            translated = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)[0]
 
             # Apply emotion-preserving modifications
             if emotion and intensity:
@@ -93,6 +97,8 @@ class Translator:
 
         except Exception as e:
             print(f"Translation error: {e}")
+            import traceback
+            traceback.print_exc()
             return text  # Return original on error
 
     def _apply_emotional_styling(self, text: str, emotion: str, intensity: float) -> str:
@@ -119,4 +125,4 @@ class Translator:
             if text.endswith("."):
                 text = text.rstrip(".") + "..."
                 
-        return text
+        return text 

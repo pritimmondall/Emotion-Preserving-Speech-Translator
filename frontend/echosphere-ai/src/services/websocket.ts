@@ -2,8 +2,22 @@
 
 export interface TranscriptionResult {
   text: string;
+  translatedText?: string;
   emotion: string;
   intensity: number;
+  sourceLanguage?: string;
+  targetLanguage?: string;
+  audio?: string; // Base64 encoded audio
+  audioFormat?: string; // e.g., "mp3"
+}
+
+export interface ProsodySettings {
+  pitch: number;
+  rate: number;
+  volume: number;
+  targetLanguage: string;
+  sourceLanguage: string;
+  emotionPreserving: boolean;
 }
 
 export type WebSocketCallback = (result: TranscriptionResult) => void;
@@ -96,6 +110,22 @@ class WebSocketService {
       this.ws.send(audioBlob);
     } else {
       console.warn('WebSocket not connected. Cannot send audio.');
+    }
+  }
+
+  /**
+   * Send prosody and translation settings to the backend
+   */
+  sendSettings(settings: Partial<ProsodySettings>): void {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const message = {
+        type: 'settings',
+        data: settings
+      };
+      this.ws.send(JSON.stringify(message));
+      console.log('Sent settings to backend:', settings);
+    } else {
+      console.warn('WebSocket not connected. Cannot send settings.');
     }
   }
 
